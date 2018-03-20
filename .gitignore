@@ -1,3 +1,6 @@
+# IDE
+.idea
+
 # Distribution / packaging
 .Python
 env/
@@ -15,6 +18,10 @@ var/
 *.egg-info/
 .installed.cfg
 *.egg
+.python-version
 
 # Serverless directories
 .serverless
+
+# vendored packages should be installed from requirements.txt
+vendored
