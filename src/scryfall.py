@@ -192,23 +192,29 @@ def answer_inline_query(msg):
 
 def search(event, _):
     """Answer the event. The second parameter is the AWS context and ignored for now."""
-    data = json.loads(event["body"])
-    LOGGER.debug(data)
     try:
-        if 'inline_query' in data:
-            message = data['inline_query']
-            return answer_inline_query(message)
-        elif 'message' in data:
-            return {
-                "statusCode": 200,
-                "message": "not imlemented"
-            }
-        else:
-            raise Exception(f'unknown event type for {data}')
+        data = json.loads(event["body"])
+    except (KeyError, json.JSONDecodeError):
+        return {
+            "statusCode": 400,
+            "message": "body is not valid json or missing"
+        }
+    LOGGER.debug(data)
 
-    except Exception as error:  # pylint: disable=broad-except
-        LOGGER.error("Error while trying to answer", exc_info=error)
-        return {"statusCode": 500}
+    if 'inline_query' in data:
+        message = data['inline_query']
+        try:
+            return answer_inline_query(message)
+        except Exception as error:  # pylint: disable=broad-except
+            LOGGER.error("Error while trying to answer", exc_info=error)
+            return {"statusCode": 500}
+    elif 'message' in data:
+        return {"statusCode": 200}
+    else:
+        return {
+            "statusCode": 400,
+            "message": "not imlemented"
+        }
 
 
 if __name__ == '__main__':

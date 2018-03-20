@@ -6,7 +6,6 @@ provider:
   runtime: python3.6
   stage: dev
   region: eu-central-1
-  memorySize: 128
   environment:
     TELEGRAM_TOKEN: ${env:TELEGRAM_TOKEN}
 
