@@ -119,34 +119,37 @@ def inline_photo_from_card(card):
 
 def get_photos_from_scryfall(query_string: str, offset: int = 0):
     """Get results for query_string from scryfall and return as InlineResult."""
+    cards = Results(query_string, chunk_size=RESULTS_AT_ONCE)
+    results = []
     try:
-        cards = Results(query_string, chunk_size=RESULTS_AT_ONCE)
-        results = []
         for card in cards[offset]:
             results.extend(inline_photo_from_card(card))
-        next_offset = offset + 1
     except (requests.HTTPError, IndexError):  # we silently ignore 404 and other errors
-        next_offset = ''
-        results = []
+        return dict(results=[])
 
-    return dict(results=results, next_offset=next_offset)
+    return dict(results=results, next_offset=str(offset + 1))
 
 
 def compute_answer(query_id, query_string, user_from, offset):
     """Compute the answer for the given message as a inline answer."""
+    username, first_name = user_from.get('username', ''), user_from['first_name']
 
-    username, first_name = user_from['username'], user_from['first_name']
-
-    LOGGER.info('%s: Query %s from %r (%s) with offset: %s',
+    LOGGER.info('%s: Query %s from %r (%s) with offset: %r',
                 query_id, query_string, first_name, username, offset)
-
-    _off = int(offset) if offset else 0
 
     response = {
         'inline_query_id': query_id,
-        'cache_time': 3600,
-        **get_photos_from_scryfall(query_string, _off)
+        'cache_time': 3600
     }
+
+    if len(query_string) < 3:
+        LOGGER.info("Query to short, not responding")
+        response['results'] = []
+        return response
+
+    _off = int(offset) if offset else 0
+
+    response.update(get_photos_from_scryfall(query_string, _off))
 
     LOGGER.info(f'next offset: {response.get("next_offset", -1)}')
 
@@ -154,6 +157,12 @@ def compute_answer(query_id, query_string, user_from, offset):
 
 
 def glance_msg(msg):
+    """
+    Glance info about the msg to a dictionary.
+
+    >>> glance_msg({'from': 'from', 'id':'id', 'query': 'query', 'offset': 'offset'})
+    {'user_from': 'from', 'query_id': 'id', 'query_string': 'query', 'offset': 'offset'}
+    """
     return {
         'user_from': msg['from'],
         'query_id': msg['id'],
@@ -171,9 +180,12 @@ def answer_inline_query(msg):
         LOGGER.critical("An error occurred when trying to compute answer", exc_info=error)
         return {"statusCode": 502}
 
+    response_data['results'] = json.dumps(response_data['results'])
+
     LOGGER.debug('sending %s', response_data)
     post_request = requests.post(url=parse.urljoin(BASE_URL, 'answerInlineQuery'),
                                  data=response_data)
+    LOGGER.debug(post_request.text)
     post_request.raise_for_status()
     return {"statusCode": 200}
 
