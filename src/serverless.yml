@@ -13,7 +13,7 @@ provider:
 
 functions:
   post:
-    handler: handler.search
+    handler: scryfall.search
     events:
       - http:
           path: scryfall_search_inline
@@ -25,3 +25,4 @@ functions:
         vendored/**
       exclude:
         vendored/*.dist-info/**
+        __init__.py
