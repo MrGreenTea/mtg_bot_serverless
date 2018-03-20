@@ -31,7 +31,7 @@ class Results(list):
     def __init__(self, query, chunk_size):
         super(Results, self).__init__()
         self.query = query
-        data = parse.urlencode({'order': 'edhrec', 'q': parse.quote_plus(f'{query}')})
+        data = parse.urlencode({'order': 'edhrec', 'q': parse.quote(query, safe=':/')})
         self.search_url = 'https://api.scryfall.com/cards/search?{}'.format(data)
         self.next_url = self.search_url
         self.chunk_size = chunk_size
@@ -108,7 +108,8 @@ def inline_photo_from_card(card):
     Works even for double faced cards.
     """
 
-    faces = card.get('card_faces', card)  # if there are multiple faces, iterate over them. Else use the card directly.
+    faces = card.get('card_faces',
+                     [card])  # if there are multiple faces, iterate over them. Else use the card directly.
 
     for face in faces:
         args = dict(card=card, photo_width=672, photo_height=936,
@@ -152,13 +153,20 @@ def compute_answer(query_id, query_string, user_from, offset):
     return response
 
 
+def glance_msg(msg):
+    return {
+        'user_from': msg['from'],
+        'query_id': msg['id'],
+        'query_string': msg['query'],
+        'offset': msg['offset']
+    }
+
+
 def answer_inline_query(msg):
     """answer the inline query at msg."""
-    user_from, query_id, query_string, offset = msg['from'], msg['id'], msg['query'], msg['offset']
 
     try:
-        response_data = compute_answer(user_from=user_from,
-                                       query_id=query_id, query_string=query_string, offset=offset)
+        response_data = compute_answer(**glance_msg(msg))
     except Exception as error:  # pylint: disable=broad-except
         LOGGER.critical("An error occurred when trying to compute answer", exc_info=error)
         return {"statusCode": 502}
