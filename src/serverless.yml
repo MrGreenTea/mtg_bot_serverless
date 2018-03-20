@@ -20,9 +20,9 @@ functions:
           method: post
           cors: true
     package:
-      include:
-        handler.py
-        vendored/**
       exclude:
-        vendored/*.dist-info/**
-        __init__.py
+         - ".*/**"
+         - vendored/*.dist-info/**
+      include:
+         - handler.py
+         - vendored/**
