@@ -13,7 +13,7 @@ import requests  # pylint: disable=wrong-import-position
 
 if os.environ.get('TELEGRAM_TOKEN'):
     TOKEN = os.environ['TELEGRAM_TOKEN']
-    BASE_URL = "https://api.telegram.org/bot{}".format(TOKEN)
+    BASE_URL = "https://api.telegram.org/bot{}/".format(TOKEN)
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)  # only set logging level when running as main
@@ -31,7 +31,7 @@ class Results(list):
     def __init__(self, query, chunk_size):
         super(Results, self).__init__()
         self.query = query
-        data = parse.urlencode({'order': 'edhrec', 'q': parse.quote(query, safe=':/')})
+        data = parse.urlencode({'order': 'edhrec', 'q': query})
         self.search_url = 'https://api.scryfall.com/cards/search?{}'.format(data)
         self.next_url = self.search_url
         self.chunk_size = chunk_size
@@ -172,8 +172,9 @@ def answer_inline_query(msg):
         return {"statusCode": 502}
 
     LOGGER.debug('sending %s', response_data)
-    requests.post(url=parse.urljoin(BASE_URL, 'answerInlineQuery'),
-                  data=response_data)
+    post_request = requests.post(url=parse.urljoin(BASE_URL, 'answerInlineQuery'),
+                                 data=response_data)
+    post_request.raise_for_status()
     return {"statusCode": 200}
 
 
@@ -200,4 +201,5 @@ def hello(event, _):
 
 if __name__ == '__main__':
     import doctest
+
     doctest.testmod()
