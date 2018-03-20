@@ -13,15 +13,15 @@ provider:
 
 functions:
   post:
-    handler: handler.hello
+    handler: handler.search
     events:
       - http:
-          path: my-custom-url
+          path: scryfall_search_inline
           method: post
           cors: true
     package:
       include:
-        vendored/**
         handler.py
+        vendored/**
       exclude:
-        vendored/*.dist-info
+        vendored/*.dist-info/**

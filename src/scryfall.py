@@ -190,7 +190,7 @@ def answer_inline_query(msg):
     return {"statusCode": 200}
 
 
-def hello(event, _):
+def search(event, _):
     """Answer the event. The second parameter is the AWS context and ignored for now."""
     data = json.loads(event["body"])
     LOGGER.debug(data)
