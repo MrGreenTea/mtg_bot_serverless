@@ -1,0 +1,27 @@
+service: mtgbot
+
+
+provider:
+  name: aws
+  runtime: python3.6
+  stage: dev
+  region: eu-central-1
+  memorySize: 128
+  environment:
+    TELEGRAM_TOKEN: ${env:TELEGRAM_TOKEN}
+
+
+functions:
+  post:
+    handler: handler.hello
+    events:
+      - http:
+          path: my-custom-url
+          method: post
+          cors: true
+    package:
+      include:
+        vendored/**
+        handler.py
+      exclude:
+        vendored/*.dist-info
