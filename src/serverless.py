@@ -115,8 +115,10 @@ def search(event, _):
 
     if 'inline_query' in data:
         message = data['inline_query']
-        ELASTIC_CLIENT.create('query_requests', 'json', uuid.uuid4().hex, body=message,
-                              timestamp=datetime.datetime.now(datetime.timezone.utc))
+        ELASTIC_CLIENT.create('query_requests', 'json', uuid.uuid4().hex,
+                              body=dict(**message,
+                                        timestamp=datetime.datetime.now(datetime.timezone.utc))
+                              )
         try:
             return answer_inline_query(message)
         except Exception as error:  # pylint: disable=broad-except
