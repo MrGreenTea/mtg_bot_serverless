@@ -5,8 +5,6 @@ import sys
 from pathlib import Path
 from urllib import parse
 
-from elastic import connect_elastic, ensure_index
-
 sys.path.append(Path(__file__).with_name('vendored'))  # add vendored directory to PythonPath
 
 # pylint: disable=wrong-import-position
@@ -14,6 +12,7 @@ import requests
 
 import scryfall
 import utils
+from elastic import connect_elastic, ensure_index
 
 # pylint: enable=wrong-import-position
 
@@ -24,6 +23,7 @@ TOKEN = utils.get_config('TELEGRAM_TOKEN')
 TELEGRAM_API_URL = utils.get_config('TELEGRAM_API_URL', 'https://api.telegram.org/bot{}/').format(TOKEN)
 
 ELASTIC_CLIENT = connect_elastic(utils.get_config('ELASTIC_ENDPOINT'))
+ensure_index(ELASTIC_CLIENT, utils.get_config('ELASTIC_INDEX', 'inline_queries'))  # we will log queries to this index
 
 
 def compute_answer(query_id, query_string, user_from, offset):
@@ -85,9 +85,6 @@ def answer_inline_query(msg):
     except requests.HTTPError:
         return {"statusCode": 502}
     return {"statusCode": 200}
-
-
-ensure_index(ELASTIC_CLIENT, 'inline_queries')
 
 
 def search(event, _):
