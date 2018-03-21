@@ -1,22 +1,14 @@
 """AWS lambda handler for a telegram bot that searches for you on scryfall."""
 import json
 import logging
-import sys
-from pathlib import Path
 from urllib import parse
-
-sys.path.append(Path(__file__).with_name('vendored'))  # add vendored directory to PythonPath
-
-# pylint: disable=wrong-import-position
-import requests
 
 import scryfall
 import utils
 from elastic import connect_elastic, ensure_index
+from vendored import requests
 
-# pylint: enable=wrong-import-position
-
-
+logging.getLogger().setLevel(utils.get_config('LOGGING_LEVEL', logging.DEBUG))
 LOGGER = logging.getLogger(__name__)
 
 TOKEN = utils.get_config('TELEGRAM_TOKEN')

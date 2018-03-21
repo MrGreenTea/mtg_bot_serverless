@@ -6,13 +6,16 @@ provider:
   runtime: python3.6
   stage: dev
   region: eu-central-1
+  memorySize: 256
+  timeout: 3
   environment:
     TELEGRAM_TOKEN: ${env:TELEGRAM_TOKEN}
+    ELASTIC_ENDPOINT: ${env:ELASTIC_ENDPOINT}
 
 
 functions:
   post:
-    handler: scryfall.search
+    handler: serverless.search
     events:
       - http:
           path: scryfall_search_inline
@@ -20,8 +23,4 @@ functions:
           cors: true
     package:
       exclude:
-         - ".*/**"
-         - vendored/*.dist-info/**
-      include:
-         - handler.py
-         - vendored/**
+         - __init__.py

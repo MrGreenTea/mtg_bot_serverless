@@ -15,7 +15,6 @@ if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)  # only set logging level when running as main
 
 LOGGER = logging.getLogger(__name__)
-LOGGER.setLevel(get_config('LOGGING_LEVEL', logging.DEBUG))
 
 SCRYFALL_API_URL = get_config('SCRYFALL_API_URL', 'https://api.scryfall.com/cards/search?{}')
 RESULTS_AT_ONCE = get_config('RESULTS_AT_ONCE', 24)
