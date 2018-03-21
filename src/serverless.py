@@ -31,10 +31,11 @@ else:  # else fake the ELASTIC_CLIENT
 
 def compute_answer(query_id, query_string, user_from, offset):
     """Compute the answer for the given message as a inline answer."""
-    user_id, username, first_name = user_from['id'], user_from.get('username', ''), user_from['first_name']
+    user_id, username = user_from['id'], user_from.get('username')
+    user_full_name = ' '.join(n for n in (user_from.get('first_name'), user_from.get('last_name')) if n)
 
     LOGGER.info('%s: Query %s from %r (%s) with offset: %r',
-                query_id, query_string, first_name, username, offset)
+                query_id, query_string, user_full_name, username, offset)
 
     response = {'inline_query_id': query_id}
 
