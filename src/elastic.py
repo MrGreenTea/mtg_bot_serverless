@@ -1,7 +1,7 @@
 """Module for connecting and writing to elastic search."""
 import logging
 
-import elasticsearch
+from vendored import elasticsearch
 
 LOGGER = logging.getLogger(__name__)
 

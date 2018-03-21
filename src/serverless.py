@@ -3,10 +3,12 @@ import json
 import logging
 from urllib import parse
 
+from vendored import requests
+
 import scryfall
 import utils
 from elastic import connect_elastic, ensure_index
-from vendored import requests
+
 
 logging.getLogger().setLevel(utils.get_config('LOGGING_LEVEL', logging.DEBUG))
 LOGGER = logging.getLogger(__name__)
