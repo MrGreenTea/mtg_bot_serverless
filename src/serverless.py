@@ -115,7 +115,7 @@ def search(event, _):
 
     if 'inline_query' in data:
         message = data['inline_query']
-        ELASTIC_CLIENT.create('query_requests', 'json', event.aws_request_id,
+        ELASTIC_CLIENT.create('query_requests', 'json', uuid.uuid4().hex,
                               body=message, timestamp=str(datetime.datetime.now()))
         try:
             return answer_inline_query(message)
