@@ -24,7 +24,7 @@ if utils.get_config('ELASTIC_ENDPOINT', default=False):
 
     _QUERY_RESULTS_MAPPINGS = {
         "mappings": {
-            "doc": {
+            "json": {
                 "properties": {
                     "id": {"type": "long"},
                     "from": {
