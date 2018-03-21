@@ -1,4 +1,5 @@
 """AWS lambda handler for a telegram bot that searches for you on scryfall."""
+import datetime
 import json
 import logging
 import uuid
@@ -7,7 +8,6 @@ from urllib import parse
 import utils
 
 from vendored import requests
-
 
 import scryfall
 import elastic
@@ -25,6 +25,7 @@ if utils.get_config('ELASTIC_ENDPOINT', default=False):
     elastic.ensure_index(ELASTIC_CLIENT, utils.get_config('ELASTIC_INDEX', 'query_requests'))
 else:  # else fake the ELASTIC_CLIENT
     import unittest.mock
+
     ELASTIC_CLIENT = unittest.mock.Mock(spec=elastic.elasticsearch.Elasticsearch)
     del unittest.mock
 
@@ -114,7 +115,8 @@ def search(event, _):
 
     if 'inline_query' in data:
         message = data['inline_query']
-        ELASTIC_CLIENT.create('query_requests', 'json', str(uuid.uuid4()), message)
+        ELASTIC_CLIENT.create('query_requests', 'json', event.aws_request_id,
+                              body=message, timestamp=str(datetime.datetime.now()))
         try:
             return answer_inline_query(message)
         except Exception as error:  # pylint: disable=broad-except
