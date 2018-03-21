@@ -13,4 +13,4 @@ def test_inline_card():
     assert inline_card['photo_height'] == 0
     assert inline_card['photo_url'] == 'photo_url'
     assert inline_card['thumb_url'] == 'thumb_url'
-    assert inline_card['id'] == 'idname'
+    assert inline_card['id']
