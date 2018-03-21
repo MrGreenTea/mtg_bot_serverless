@@ -3,14 +3,15 @@ import json
 import logging
 from urllib import parse
 
+import utils
+
 from vendored import requests
 
+
 import scryfall
-import utils
 from elastic import connect_elastic, ensure_index
 
-
-logging.getLogger().setLevel(utils.get_config('LOGGING_LEVEL', logging.DEBUG))
+logging.getLogger().setLevel(utils.get_config('LOGGING_LEVEL', logging.INFO))
 LOGGER = logging.getLogger(__name__)
 
 TOKEN = utils.get_config('TELEGRAM_TOKEN')
@@ -33,7 +34,7 @@ def compute_answer(query_id, query_string, user_from, offset):
     response = {'inline_query_id': query_id}
 
     if not query_string:
-        response['cache_time'] = 0
+        response['cache_time'] = 1
         if user_id in _CACHE:
             query_string = _CACHE[user_id]
             LOGGER.info("No query given, using cached query for user ID %d: %r", user_id, query_string)
@@ -81,7 +82,7 @@ def answer_inline_query(msg):
 
     response_data['results'] = json.dumps(response_data['results'])
 
-    LOGGER.debug('sending %s', response_data)
+    LOGGER.info('sending %s', response_data)
     post_request = requests.post(url=parse.urljoin(TELEGRAM_API_URL, 'answerInlineQuery'),
                                  data=response_data)
     LOGGER.debug(post_request.text)
@@ -101,7 +102,7 @@ def search(event, _):
             "statusCode": 400,
             "message": "body is not valid json or missing"
         }
-    LOGGER.debug(data)
+    LOGGER.info('Got %s as data', data)
 
     if 'inline_query' in data:
         message = data['inline_query']

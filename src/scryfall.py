@@ -103,7 +103,9 @@ def inline_photo_from_card(card):
     """
 
     # if there are multiple faces (DFC), iterate over them. Else use the card itself.
-    for face in card.get('card_faces', [card]):
+    LOGGER.debug('Building InlineResult from %r', card)
+    faces = [card] if 'image_uris' in card else card['card_faces']
+    for face in faces:
         args = dict(card=card, photo_width=672, photo_height=936,
                     photo_url=face['image_uris']['png'], thumb_url=face['image_uris']['small'])
         yield inline_card(**args)
