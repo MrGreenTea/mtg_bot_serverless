@@ -1,6 +1,7 @@
 """AWS lambda handler for a telegram bot that searches for you on scryfall."""
 import json
 import logging
+import uuid
 from urllib import parse
 
 import utils
@@ -9,7 +10,7 @@ from vendored import requests
 
 
 import scryfall
-from elastic import connect_elastic, ensure_index
+import elastic
 
 logging.getLogger().setLevel(utils.get_config('LOGGING_LEVEL', logging.INFO))
 LOGGER = logging.getLogger(__name__)
@@ -20,8 +21,12 @@ TELEGRAM_API_URL = utils.get_config('TELEGRAM_API_URL', 'https://api.telegram.or
 _CACHE = {}
 
 if utils.get_config('ELASTIC_ENDPOINT', default=False):
-    ELASTIC_CLIENT = connect_elastic(utils.get_config('ELASTIC_ENDPOINT'))
-    ensure_index(ELASTIC_CLIENT, utils.get_config('ELASTIC_INDEX', 'inline_queries'))
+    ELASTIC_CLIENT = elastic.connect_elastic(utils.get_config('ELASTIC_ENDPOINT'))
+    elastic.ensure_index(ELASTIC_CLIENT, utils.get_config('ELASTIC_INDEX', 'query_requests'))
+else:  # else fake the ELASTIC_CLIENT
+    import unittest.mock
+    ELASTIC_CLIENT = unittest.mock.Mock(spec=elastic.elasticsearch.Elasticsearch)
+    del unittest.mock
 
 
 def compute_answer(query_id, query_string, user_from, offset):
@@ -96,6 +101,7 @@ def answer_inline_query(msg):
 
 def search(event, _):
     """Answer the event. The second parameter is the AWS context and ignored for now."""
+    ELASTIC_CLIENT.create('query_requests', 'json', str(uuid.uuid4()), event)
     try:
         data = json.loads(event["body"])
     except (KeyError, json.JSONDecodeError):

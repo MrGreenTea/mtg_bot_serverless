@@ -10,6 +10,7 @@ provider:
   timeout: 3
   environment:
     TELEGRAM_TOKEN: ${env:TELEGRAM_TOKEN}
+    ELASTIC_ENDPOINT: ${env:ELASTIC_ENDPOINT}
 
 
 functions:
