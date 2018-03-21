@@ -1,27 +1,43 @@
 """AWS lambda handler for a telegram bot that searches for you on scryfall."""
+import functools
 import json
 import logging
 import os
 import sys
+import uuid
 from itertools import zip_longest
 from urllib import parse
 
+
+def get_config(name: str, default=None) -> str:
+    """
+    Returns the environment variable with name or default if it's not set.
+
+    Will raise an KeyError if default is None and name is not set.
+    """
+    if default is None:
+        return os.environ[name]
+
+    return os.environ.get(name, default)
+
+
 BASE_DIR = os.path.dirname(os.path.realpath(__file__))
-sys.path.append(os.path.join(BASE_DIR, "vendored"))
+# add vendored packages for import.
+sys.path.append(get_config('VENDORED_PATH', os.path.join(BASE_DIR, 'vendored')))
 
 import requests  # pylint: disable=wrong-import-position
 
-if os.environ.get('TELEGRAM_TOKEN'):
-    TOKEN = os.environ['TELEGRAM_TOKEN']
-    BASE_URL = "https://api.telegram.org/bot{}/".format(TOKEN)
+TOKEN = get_config('TELEGRAM_TOKEN')
+TELEGRAM_API_URL = get_config('TELEGRAM_API_URL', 'https://api.telegram.org/bot{}/').format(TOKEN)
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)  # only set logging level when running as main
 
 LOGGER = logging.getLogger(__name__)
-LOGGER.setLevel(logging.DEBUG)
+LOGGER.setLevel(os.environ.get('LOGGING_LEVEL', logging.DEBUG))
 
-RESULTS_AT_ONCE = os.environ.get('RESULTS_AT_ONCE', 25)
+SCRYFALL_API_URL = get_config('SCRYFALL_API_URL', 'https://api.scryfall.com/cards/search?{}')
+RESULTS_AT_ONCE = os.environ.get('RESULTS_AT_ONCE', 24)
 
 
 class Results(list):
@@ -32,7 +48,7 @@ class Results(list):
         super(Results, self).__init__()
         self.query = query
         data = parse.urlencode({'order': 'edhrec', 'q': query})
-        self.search_url = 'https://api.scryfall.com/cards/search?{}'.format(data)
+        self.search_url = SCRYFALL_API_URL.format(data)
         self.next_url = self.search_url
         self.chunk_size = chunk_size
 
@@ -43,7 +59,8 @@ class Results(list):
         return req.json()
 
     def __getitem__(self, item):
-        if item >= len(self):
+        # This is quite unoptimized an might take a long while when trying to get the last page for example.
+        while item >= len(self):  # as long as we don't have the page cached, we have to get the next one.
             if self.next_url is not None:
                 results_json = self.get_url(self.next_url)
                 self.extend(list(p) for p in paginate_iterator(results_json['data'], self.chunk_size))
@@ -87,12 +104,11 @@ def inline_card(card, photo_width, photo_height, photo_url, thumb_url):
     Create an InlineQueryResultPhoto for the given card.
     """
     name, scryfall_uri = card['name'], card['scryfall_uri']
-    card_id = ''.join(c for c in f"{card['id']}{name}" if c.isalnum())  # remove non alpha numeric from id
     reply_markup = inline_button(name, scryfall_uri)
 
     return {
         'type': 'photo',
-        'id': card_id,
+        'id': str(uuid.uuid4()),
         'photo_url': photo_url,
         'thumb_url': thumb_url,
         'photo_width': photo_width,
@@ -108,10 +124,8 @@ def inline_photo_from_card(card):
     Works even for double faced cards.
     """
 
-    faces = card.get('card_faces',
-                     [card])  # if there are multiple faces, iterate over them. Else use the card directly.
-
-    for face in faces:
+    # if there are multiple faces (DFC), iterate over them. Else use the card itself.
+    for face in card.get('card_faces', [card]):
         args = dict(card=card, photo_width=672, photo_height=936,
                     photo_url=face['image_uris']['png'], thumb_url=face['image_uris']['small'])
         yield inline_card(**args)
@@ -119,15 +133,21 @@ def inline_photo_from_card(card):
 
 def get_photos_from_scryfall(query_string: str, offset: int = 0):
     """Get results for query_string from scryfall and return as InlineResult."""
-    cards = Results(query_string, chunk_size=RESULTS_AT_ONCE)
+    cards = paginated_results(query_string)
     results = []
     try:
         for card in cards[offset]:
             results.extend(inline_photo_from_card(card))
     except (requests.HTTPError, IndexError):  # we silently ignore 404 and other errors
-        return dict(results=[])
+        return dict(results=results)
 
     return dict(results=results, next_offset=str(offset + 1))
+
+
+@functools.lru_cache(get_config("LRU_CACHE_MAXSIZE", 128))
+def paginated_results(query_string):
+    """Simply returns Results(query_string), but caches it for possible reuse."""
+    return Results(query_string, chunk_size=RESULTS_AT_ONCE)
 
 
 def compute_answer(query_id, query_string, user_from, offset):
@@ -183,7 +203,7 @@ def answer_inline_query(msg):
     response_data['results'] = json.dumps(response_data['results'])
 
     LOGGER.debug('sending %s', response_data)
-    post_request = requests.post(url=parse.urljoin(BASE_URL, 'answerInlineQuery'),
+    post_request = requests.post(url=parse.urljoin(TELEGRAM_API_URL, 'answerInlineQuery'),
                                  data=response_data)
     LOGGER.debug(post_request.text)
     post_request.raise_for_status()
