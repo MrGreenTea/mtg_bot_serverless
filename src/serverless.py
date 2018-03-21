@@ -101,7 +101,6 @@ def answer_inline_query(msg):
 
 def search(event, _):
     """Answer the event. The second parameter is the AWS context and ignored for now."""
-    ELASTIC_CLIENT.create('query_requests', 'json', str(uuid.uuid4()), event)
     try:
         data = json.loads(event["body"])
     except (KeyError, json.JSONDecodeError):
@@ -109,10 +108,12 @@ def search(event, _):
             "statusCode": 400,
             "message": "body is not valid json or missing"
         }
+
     LOGGER.info('Got %s as data', data)
 
     if 'inline_query' in data:
         message = data['inline_query']
+        ELASTIC_CLIENT.create('query_requests', 'json', str(uuid.uuid4()), message)
         try:
             return answer_inline_query(message)
         except Exception as error:  # pylint: disable=broad-except
