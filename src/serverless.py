@@ -5,12 +5,11 @@ import logging
 import uuid
 from urllib import parse
 
-import utils
-
 from vendored import requests
 
-import scryfall
 import elastic
+import scryfall
+import utils
 
 logging.getLogger().setLevel(utils.get_config('LOGGING_LEVEL', logging.INFO))
 LOGGER = logging.getLogger(__name__)
@@ -22,7 +21,28 @@ _CACHE = {}
 
 if utils.get_config('ELASTIC_ENDPOINT', default=False):
     ELASTIC_CLIENT = elastic.connect_elastic(utils.get_config('ELASTIC_ENDPOINT'))
-    elastic.ensure_index(ELASTIC_CLIENT, utils.get_config('ELASTIC_INDEX', 'query_requests'))
+
+    _QUERY_RESULTS_MAPPINGS = {
+        "mappings": {
+            "doc": {
+                "properties": {
+                    "id": {"type": "long"},
+                    "from": {
+                        "properties": {
+                            "id": {"type": "long"},
+                            "username": {"type": "keyword"}
+                        }
+                    },
+                    "timestamp": {"type": "date"},
+                    "offset": {"type": "keyword"},
+                    "query": {"type": "text", "fields": {"raw": {"type": "keyword"}}}  # raw as keyword for aggregating
+                }
+            }
+        }
+    }
+
+    elastic.ensure_index(ELASTIC_CLIENT, utils.get_config('ELASTIC_INDEX', 'query_requests'),
+                         body=_QUERY_RESULTS_MAPPINGS)
 else:  # else fake the ELASTIC_CLIENT
     import unittest.mock
 
@@ -116,9 +136,7 @@ def search(event, _):
     if 'inline_query' in data:
         message = data['inline_query']
         ELASTIC_CLIENT.create('query_requests', 'json', uuid.uuid4().hex,
-                              body=dict(**message,
-                                        timestamp=datetime.datetime.now(datetime.timezone.utc))
-                              )
+                              body=dict(**message, timestamp=datetime.datetime.now(datetime.timezone.utc)))
         try:
             return answer_inline_query(message)
         except Exception as error:  # pylint: disable=broad-except

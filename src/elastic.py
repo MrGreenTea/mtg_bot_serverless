@@ -20,7 +20,7 @@ def connect_elastic(end_point):
         raise
 
 
-def ensure_index(elastic_client: elasticsearch.Elasticsearch, index_name: str):
+def ensure_index(elastic_client: elasticsearch.Elasticsearch, index_name: str, body=None):
     """Makes sure the index with index_name exists."""
     if not elastic_client.indices.exists(index_name):
-        elastic_client.indices.create(index_name)
+        elastic_client.indices.create(index_name, body=body)
