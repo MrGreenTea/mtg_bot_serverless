@@ -16,28 +16,39 @@ LOGGER = logging.getLogger(__name__)
 TOKEN = utils.get_config('TELEGRAM_TOKEN')
 TELEGRAM_API_URL = utils.get_config('TELEGRAM_API_URL', 'https://api.telegram.org/bot{}/').format(TOKEN)
 
-ELASTIC_CLIENT = connect_elastic(utils.get_config('ELASTIC_ENDPOINT'))
-ensure_index(ELASTIC_CLIENT, utils.get_config('ELASTIC_INDEX', 'inline_queries'))  # we will log queries to this index
+_CACHE = {}
+
+if utils.get_config('ELASTIC_ENDPOINT', default=False):
+    ELASTIC_CLIENT = connect_elastic(utils.get_config('ELASTIC_ENDPOINT'))
+    ensure_index(ELASTIC_CLIENT, utils.get_config('ELASTIC_INDEX', 'inline_queries'))
 
 
 def compute_answer(query_id, query_string, user_from, offset):
     """Compute the answer for the given message as a inline answer."""
-    username, first_name = user_from.get('username', ''), user_from['first_name']
+    user_id, username, first_name = user_from['id'], user_from.get('username', ''), user_from['first_name']
 
     LOGGER.info('%s: Query %s from %r (%s) with offset: %r',
                 query_id, query_string, first_name, username, offset)
 
-    response = {
-        'inline_query_id': query_id,
-        'cache_time': 3600
-    }
+    response = {'inline_query_id': query_id}
 
-    if len(query_string) < 3:
-        LOGGER.info("Query to short, not responding")
-        response['results'] = []
-        return response
+    if not query_string:
+        response['cache_time'] = 0
+        if user_id in _CACHE:
+            query_string = _CACHE[user_id]
+            LOGGER.info("No query given, using cached query for user ID %d: %r", user_id, query_string)
+        else:
+            response['results'] = []
+            return response
+    else:
+        response['cache_time'] = 3600  # cache for up to an hour for the same query
 
-    response.update(scryfall.get_photos_from_scryfall(query_string, int(offset) if offset else 0))
+    scryfall_results = scryfall.get_photos_from_scryfall(query_string, int(offset) if offset else 0)
+
+    if scryfall_results['results']:  # cache last results for current User
+        _CACHE[user_id] = query_string
+
+    response.update(scryfall_results)
 
     LOGGER.info('next offset: %s', response.get("next_offset"))
 
