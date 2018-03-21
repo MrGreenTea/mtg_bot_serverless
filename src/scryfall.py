@@ -1,43 +1,24 @@
-"""AWS lambda handler for a telegram bot that searches for you on scryfall."""
+"""Functionality that connects to the scryfall API."""
 import functools
-import json
 import logging
-import os
-import sys
 import uuid
 from itertools import zip_longest
 from urllib import parse
 
+import requests
 
-def get_config(name: str, default=None) -> str:
-    """
-    Returns the environment variable with name or default if it's not set.
+from utils import get_config
 
-    Will raise an KeyError if default is None and name is not set.
-    """
-    if default is None:
-        return os.environ[name]
-
-    return os.environ.get(name, default)
-
-
-BASE_DIR = os.path.dirname(os.path.realpath(__file__))
 # add vendored packages for import.
-sys.path.append(get_config('VENDORED_PATH', os.path.join(BASE_DIR, 'vendored')))
-
-import requests  # pylint: disable=wrong-import-position
-
-TOKEN = get_config('TELEGRAM_TOKEN')
-TELEGRAM_API_URL = get_config('TELEGRAM_API_URL', 'https://api.telegram.org/bot{}/').format(TOKEN)
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)  # only set logging level when running as main
 
 LOGGER = logging.getLogger(__name__)
-LOGGER.setLevel(os.environ.get('LOGGING_LEVEL', logging.DEBUG))
+LOGGER.setLevel(get_config('LOGGING_LEVEL', logging.DEBUG))
 
 SCRYFALL_API_URL = get_config('SCRYFALL_API_URL', 'https://api.scryfall.com/cards/search?{}')
-RESULTS_AT_ONCE = os.environ.get('RESULTS_AT_ONCE', 24)
+RESULTS_AT_ONCE = get_config('RESULTS_AT_ONCE', 24)
 
 
 class Results(list):
@@ -148,93 +129,6 @@ def get_photos_from_scryfall(query_string: str, offset: int = 0):
 def paginated_results(query_string):
     """Simply returns Results(query_string), but caches it for possible reuse."""
     return Results(query_string, chunk_size=RESULTS_AT_ONCE)
-
-
-def compute_answer(query_id, query_string, user_from, offset):
-    """Compute the answer for the given message as a inline answer."""
-    username, first_name = user_from.get('username', ''), user_from['first_name']
-
-    LOGGER.info('%s: Query %s from %r (%s) with offset: %r',
-                query_id, query_string, first_name, username, offset)
-
-    response = {
-        'inline_query_id': query_id,
-        'cache_time': 3600
-    }
-
-    if len(query_string) < 3:
-        LOGGER.info("Query to short, not responding")
-        response['results'] = []
-        return response
-
-    _off = int(offset) if offset else 0
-
-    response.update(get_photos_from_scryfall(query_string, _off))
-
-    LOGGER.info(f'next offset: {response.get("next_offset", -1)}')
-
-    return response
-
-
-def glance_msg(msg):
-    """
-    Glance info about the msg to a dictionary.
-
-    >>> glance_msg({'from': 'from', 'id':'id', 'query': 'query', 'offset': 'offset'})
-    {'user_from': 'from', 'query_id': 'id', 'query_string': 'query', 'offset': 'offset'}
-    """
-    return {
-        'user_from': msg['from'],
-        'query_id': msg['id'],
-        'query_string': msg['query'],
-        'offset': msg['offset']
-    }
-
-
-def answer_inline_query(msg):
-    """answer the inline query at msg."""
-
-    try:
-        response_data = compute_answer(**glance_msg(msg))
-    except Exception as error:  # pylint: disable=broad-except
-        LOGGER.critical("An error occurred when trying to compute answer", exc_info=error)
-        return {"statusCode": 502}
-
-    response_data['results'] = json.dumps(response_data['results'])
-
-    LOGGER.debug('sending %s', response_data)
-    post_request = requests.post(url=parse.urljoin(TELEGRAM_API_URL, 'answerInlineQuery'),
-                                 data=response_data)
-    LOGGER.debug(post_request.text)
-    post_request.raise_for_status()
-    return {"statusCode": 200}
-
-
-def search(event, _):
-    """Answer the event. The second parameter is the AWS context and ignored for now."""
-    try:
-        data = json.loads(event["body"])
-    except (KeyError, json.JSONDecodeError):
-        return {
-            "statusCode": 400,
-            "message": "body is not valid json or missing"
-        }
-    LOGGER.debug(data)
-
-    if 'inline_query' in data:
-        message = data['inline_query']
-        try:
-            return answer_inline_query(message)
-        except Exception as error:  # pylint: disable=broad-except
-            LOGGER.error("Error while trying to answer", exc_info=error)
-            return {"statusCode": 500}
-    elif 'message' in data:
-        return {"statusCode": 200}
-    else:
-        return {
-            "statusCode": 400,
-            "message": "not imlemented"
-        }
 
 
 if __name__ == '__main__':
