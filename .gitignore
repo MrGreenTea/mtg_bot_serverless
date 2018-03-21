@@ -30,4 +30,5 @@ __pycache__
 .serverless
 
 # vendored packages should be installed from requirements.txt
-vendored
+src/vendored/**
+!src/vendored/__init__.py

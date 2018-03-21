@@ -5,11 +5,9 @@ import uuid
 from itertools import zip_longest
 from urllib import parse
 
-import requests
+from vendored import requests
 
 from utils import get_config
-
-# add vendored packages for import.
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)  # only set logging level when running as main
