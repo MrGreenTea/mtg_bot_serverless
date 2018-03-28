@@ -107,7 +107,7 @@ def inline_photo_from_card(card):
     faces = [card] if 'image_uris' in card else card['card_faces']
     for face in faces:
         args = dict(card=card, photo_width=672, photo_height=936,
-                    photo_url=face['image_uris']['png'], thumb_url=face['image_uris']['small'])
+                    photo_url=face['image_uris']['large'], thumb_url=face['image_uris']['small'])
         yield inline_card(**args)
 
 
