@@ -114,10 +114,7 @@ def answer_inline_query(msg):
     post_request = requests.post(url=parse.urljoin(TELEGRAM_API_URL, 'answerInlineQuery'),
                                  data=response_data)
     LOGGER.debug(post_request.text)
-    try:
-        post_request.raise_for_status()
-    except requests.HTTPError:
-        return {"statusCode": 502}
+    post_request.raise_for_status()
     return {"statusCode": 200}
 
 
