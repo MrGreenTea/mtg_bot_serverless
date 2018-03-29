@@ -38,7 +38,7 @@ if utils.get_config('ELASTIC_ENDPOINT', default=False):
                     "timestamp": {"type": "date"},
                     "offset": {"type": "keyword"},
                     "query": {"type": "text", "fields": {"raw": {"type": "keyword"}}},  # raw as keyword for aggregating
-                    "success": {"type": "boolean"}
+                    "success": {"type": "boolean", "null_value": True}
                 }
             }
         }
@@ -136,8 +136,6 @@ def search(event, _):
     if 'inline_query' in data:
         unique_id = uuid.uuid4().hex
         message = data['inline_query']
-        ELASTIC_CLIENT.create('query_requests', DOC_TYPE, unique_id,
-                              body=dict(**message, timestamp=datetime.datetime.now(datetime.timezone.utc)))
         success = True
         try:
             return answer_inline_query(message)
@@ -146,7 +144,9 @@ def search(event, _):
             success = False
             return {"statusCode": 500}
         finally:
-            ELASTIC_CLIENT.update('query_requests', DOC_TYPE, unique_id, body=dict(success=success))
+            ELASTIC_CLIENT.create('query_requests', DOC_TYPE, unique_id,
+                                  body=dict(**message, success=success,
+                                            timestamp=datetime.datetime.now(datetime.timezone.utc)))
 
     elif 'message' in data:
         return {"statusCode": 200,
