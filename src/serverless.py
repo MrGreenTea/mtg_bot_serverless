@@ -11,6 +11,8 @@ import elastic
 import scryfall
 import utils
 
+DOC_TYPE = 'json'
+
 logging.getLogger().setLevel(utils.get_config('LOGGING_LEVEL', logging.INFO))
 LOGGER = logging.getLogger(__name__)
 
@@ -24,7 +26,7 @@ if utils.get_config('ELASTIC_ENDPOINT', default=False):
 
     _QUERY_RESULTS_MAPPINGS = {
         "mappings": {
-            "json": {
+            DOC_TYPE: {
                 "properties": {
                     "id": {"type": "long"},
                     "from": {
@@ -35,7 +37,8 @@ if utils.get_config('ELASTIC_ENDPOINT', default=False):
                     },
                     "timestamp": {"type": "date"},
                     "offset": {"type": "keyword"},
-                    "query": {"type": "text", "fields": {"raw": {"type": "keyword"}}}  # raw as keyword for aggregating
+                    "query": {"type": "text", "fields": {"raw": {"type": "keyword"}}},  # raw as keyword for aggregating
+                    "success": {"type": "boolean"}
                 }
             }
         }
@@ -131,16 +134,23 @@ def search(event, _):
     LOGGER.info('Got %s as data', data)
 
     if 'inline_query' in data:
+        unique_id = uuid.uuid4().hex
         message = data['inline_query']
-        ELASTIC_CLIENT.create('query_requests', 'json', uuid.uuid4().hex,
+        ELASTIC_CLIENT.create('query_requests', DOC_TYPE, unique_id,
                               body=dict(**message, timestamp=datetime.datetime.now(datetime.timezone.utc)))
+        success = True
         try:
             return answer_inline_query(message)
         except Exception as error:  # pylint: disable=broad-except
             LOGGER.error("Error while trying to answer", exc_info=error)
+            success = False
             return {"statusCode": 500}
+        finally:
+            ELASTIC_CLIENT.update('query_requests', DOC_TYPE, unique_id, body=dict(success=success))
+
     elif 'message' in data:
-        return {"statusCode": 200}
+        return {"statusCode": 200,
+                "message": "not implemented"}
     else:
         return {
             "statusCode": 400,
