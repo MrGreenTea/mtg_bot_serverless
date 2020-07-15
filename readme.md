@@ -6,7 +6,7 @@ We use [scryfall's API](scryfall.com/) so you can use their search syntax.
 # Deploy
 install requirements with `pip install -r requirements.txt -t vendored`
 
-install serverless with
+install serverless with `npm install -g serverless` or just use `npx serverless`
 
 export ENV Variables:
 `export AWS_ACCESS_KEY_ID=XXXX`
