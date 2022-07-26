@@ -5,10 +5,11 @@ import logging
 import uuid
 from urllib import parse
 
-from vendored import requests
+from .vendored import requests
 
-import scryfall
-import utils
+from . import scryfall
+from . import utils
+
 
 DOC_TYPE = 'json'
 

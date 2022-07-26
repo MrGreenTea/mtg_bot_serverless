@@ -1,0 +1,3 @@
+pytest==7.1.2
+pytest-sugar==0.9.5
+flake8==4.0.1
