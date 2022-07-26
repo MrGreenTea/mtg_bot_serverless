@@ -75,6 +75,7 @@ jobs:
 
   deploy:
     needs: package
+    if: ${{ github.ref == 'refs/heads/master' }}
     runs-on: ubuntu-latest
     steps:
     - uses: actions/download-artifact@v3
