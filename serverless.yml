@@ -3,7 +3,7 @@ service: mtgbot
 
 provider:
   name: aws
-  runtime: python3.6
+  runtime: python3.9
   stage: dev
   region: eu-central-1
   memorySize: 256
