@@ -1,0 +1,26 @@
+service: mtgbot
+
+
+provider:
+  name: aws
+  runtime: python3.6
+  stage: dev
+  region: eu-central-1
+  memorySize: 256
+  timeout: 3
+  environment:
+    TELEGRAM_TOKEN: ${env:TELEGRAM_TOKEN}
+
+package:
+  patterns:
+    - "!**"
+    - "src/**"
+
+functions:
+  post:
+    handler: src.serverless.search
+    events:
+      - http:
+          path: scryfall_search_inline
+          method: post
+          cors: true
