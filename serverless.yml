@@ -4,12 +4,10 @@ service: mtgbot
 provider:
   name: aws
   runtime: python3.9
-  stage: dev
-  region: eu-central-1
+  stage: ${opt:stage, 'dev'}
+  region: ${opt:region, 'eu-central-1'}
   memorySize: 256
   timeout: 3
-  environment:
-    TELEGRAM_TOKEN: ${env:TELEGRAM_TOKEN}
 
 package:
   patterns:
@@ -19,6 +17,12 @@ package:
 functions:
   post:
     handler: src.serverless.search
+    layers:
+      - arn:aws:lambda:eu-central-1:702835727665:layer:honeycomb-lambda-extension-x86_64:9
+    environment:
+      TELEGRAM_TOKEN: ${env:TELEGRAM_TOKEN}
+      LIBHONEY_API_KEY: ${env:LIBHONEY_API_KEY}
+      LIBHONEY_DATASET: mtg-bot-aws-lambda-handler
     events:
       - http:
           path: scryfall_search_inline
