@@ -66,8 +66,8 @@ jobs:
       with:
         args: package --package ${{ env.SERVERLESS_PACKAGE_PATH }}
       env:
-        TELEGRAM_TOKEN: ${{ github.ref == 'refs/heads/master' && secrets.TELEGRAM_TOKEN || 'XXXXXXXXXXXX' }}
-        LIBHONEY_API_KEY: ${{ github.ref == 'refs/heads/master' && secrets.LIBHONEY_API_KEY || 'XXXXXXXXXXXX' }}
+        TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN || 'XXXXXXXXXXXX' }}
+        LIBHONEY_API_KEY: ${{ secrets.LIBHONEY_API_KEY || 'XXXXXXXXXXXX' }}
     - name: Archive serverless package as artifacts
       uses: actions/upload-artifact@v3
       with:
