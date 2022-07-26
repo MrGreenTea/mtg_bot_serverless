@@ -71,7 +71,9 @@ jobs:
       uses: actions/upload-artifact@v3
       with:
         name: serverless
-        path: ${{ env.SERVERLESS_PACKAGE_PATH }}
+        path: |
+          ${{ env.SERVERLESS_PACKAGE_PATH }}
+          serverless.yml
 
   deploy:
     needs: package
