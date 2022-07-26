@@ -37,10 +37,10 @@ jobs:
         args: package --package ${{ env.SERVERLESS_PACKAGE_PATH }}
       env:
         TELEGRAM_TOKEN: ${{ github.ref == github.event.repository.default_branch && secrets.TELEGRAM_TOKEN || 'XXXXXXXXXXXX' }}
-    - name: Archive production artifacts
+    - name: Archive serverless package as artifacts
       uses: actions/upload-artifact@v3
       with:
-        name: dist-without-markdown
+        name: serverless
         path: ${{ env.SERVERLESS_PACKAGE_PATH }}
     - name: serverless deploy
       uses: serverless/github-action@v3.1
