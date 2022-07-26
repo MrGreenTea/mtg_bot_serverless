@@ -66,15 +66,13 @@ jobs:
       with:
         args: package --package ${{ env.SERVERLESS_PACKAGE_PATH }}
       env:
-        TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
-        LIBHONEY_API_KEY: ${{ secrets.LIBHONEY_API_KEY }}
+        TELEGRAM_TOKEN: __TELEGRAM_TOKEN__
+        LIBHONEY_API_KEY: __LIBHONEY_API_KEY__
     - name: Archive serverless package as artifacts
       uses: actions/upload-artifact@v3
       with:
-        name: serverless
-        path: |
-          ${{ env.SERVERLESS_PACKAGE_PATH }}
-          serverless.yml
+        name: serverless config
+        path: ${{ env.SERVERLESS_PACKAGE_PATH }}
 
   deploy:
     needs: package
@@ -83,9 +81,7 @@ jobs:
     concurrency: production
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/download-artifact@v3
-      with:
-       name: serverless
+    - uses: actions/checkout@v3
     - name: Use Node.js ${{ matrix.node-version }}
       uses: actions/setup-node@v3
       with:
@@ -93,10 +89,15 @@ jobs:
     - name: serverless deploy
       uses: serverless/github-action@v3.1
       with:
-        args: deploy --conceal --package ${{ env.SERVERLESS_PACKAGE_PATH }}
+        args: deploy --conceal ${{ env.SERVERLESS_PACKAGE_PATH }}
       env:
         AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
         LIBHONEY_API_KEY: ${{ secrets.LIBHONEY_API_KEY }}
+    - name: Archive serverless package as artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: production-deployment
+        path: .serverless
   
