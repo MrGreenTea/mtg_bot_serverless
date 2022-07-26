@@ -75,7 +75,7 @@ def answer_inline_query(msg):
         response_data = compute_answer(**glance_msg(msg))
     except Exception as error:  # pylint: disable=broad-except
         LOG.msg("An error occurred when trying to compute answer", exc_info=error)
-        return {"statusCode": 502}
+        raise
 
     response_data['results'] = json.dumps(response_data['results'])
 
