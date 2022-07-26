@@ -48,7 +48,7 @@ def compute_answer(query_id, query_string, user_from, offset):
 
     response.update(scryfall_results)
 
-    LOG.msg("Finishing", next_offset=response.get("next_offset"))
+    LOG.msg("Finishing response", **response)
 
     return response
 
@@ -83,7 +83,7 @@ def answer_inline_query(msg):
     post_request = requests.post(url=parse.urljoin(TELEGRAM_API_URL, 'answerInlineQuery'),
                                  data=response_data)
 
-    LOG.msg("Response", post_request)
+    LOG.msg("Response", post_request=post_request)
     post_request.raise_for_status()
     response = {"statusCode": 200}
     LOG.msg("Response", **response)
