@@ -1,8 +1,8 @@
 """AWS lambda handler for a telegram bot that searches for you on scryfall."""
-import datetime
+from .vendored import structlog
+structlog.configure(processors=[structlog.processors.JSONRenderer()])
+
 import json
-import logging
-import uuid
 from urllib import parse
 
 from .vendored import requests
@@ -11,10 +11,7 @@ from . import scryfall
 from . import utils
 
 
-DOC_TYPE = 'json'
-
-logging.getLogger().setLevel(utils.get_config('LOGGING_LEVEL', logging.INFO))
-LOGGER = logging.getLogger(__name__)
+LOG = structlog.get_logger()
 
 TOKEN = utils.get_config('TELEGRAM_TOKEN')
 TELEGRAM_API_URL = utils.get_config('TELEGRAM_API_URL', 'https://api.telegram.org/bot{}/').format(TOKEN)
@@ -27,8 +24,8 @@ def compute_answer(query_id, query_string, user_from, offset):
     user_id, username = user_from['id'], user_from.get('username')
     user_full_name = ' '.join(n for n in (user_from.get('first_name'), user_from.get('last_name')) if n)
 
-    LOGGER.info('%s: Query %s from %r (%s) with offset: %r',
-                query_id, query_string, user_full_name, username, offset)
+    LOG.msg("Received query",
+                query_id=query_id, query_string=query_string, user_full_name=user_full_name, username=username, offset=offset)
 
     response = {'inline_query_id': query_id}
 
@@ -36,7 +33,7 @@ def compute_answer(query_id, query_string, user_from, offset):
         response['cache_time'] = 1
         if user_id in _CACHE:
             query_string = _CACHE[user_id]
-            LOGGER.info("No query given, using cached query for user ID %d: %r", user_id, query_string)
+            LOG.msg("No query given, using cached query", user_id=user_id, query_string=query_string)
         else:
             response['results'] = []
             return response
@@ -46,12 +43,12 @@ def compute_answer(query_id, query_string, user_from, offset):
     scryfall_results = scryfall.get_photos_from_scryfall(query_string, int(offset) if offset else 0)
 
     if scryfall_results['results']:  # cache last results for current User
-        LOGGER.info('Caching query: %r for user with id %d', query_string, user_id)
+        LOG.msg("Caching query", query_string=query_string, user_id=user_id)
         _CACHE[user_id] = query_string
 
     response.update(scryfall_results)
 
-    LOGGER.info('next offset: %s', response.get("next_offset"))
+    LOG.msg("Finishing", next_offset=response.get("next_offset"))
 
     return response
 
@@ -77,15 +74,16 @@ def answer_inline_query(msg):
     try:
         response_data = compute_answer(**glance_msg(msg))
     except Exception as error:  # pylint: disable=broad-except
-        LOGGER.critical("An error occurred when trying to compute answer", exc_info=error)
+        LOG.msg("An error occurred when trying to compute answer", exc_info=error)
         return {"statusCode": 502}
 
     response_data['results'] = json.dumps(response_data['results'])
 
-    LOGGER.info('sending %s', response_data)
+    LOG.msg('sending', response_data=response_data)
     post_request = requests.post(url=parse.urljoin(TELEGRAM_API_URL, 'answerInlineQuery'),
                                  data=response_data)
-    LOGGER.debug(post_request.text)
+
+    LOG.msg("Response", post_request)
     post_request.raise_for_status()
     return {"statusCode": 200}
 
@@ -100,16 +98,15 @@ def search(event, _):
             "message": "body is not valid json or missing"
         }
 
-    LOGGER.info('Got %s as data', data)
+    LOG.msg("data", data=data)
 
     if 'inline_query' in data:
-        unique_id = uuid.uuid4().hex
         message = data['inline_query']
         success = True
         try:
             return answer_inline_query(message)
         except Exception as error:  # pylint: disable=broad-except
-            LOGGER.error("Error while trying to answer", exc_info=error)
+            LOG.msg("Error while trying to answer", exc_info=error)
             success = False
             return {"statusCode": 500}
 

@@ -1,6 +1,7 @@
 """Functionality that connects to the scryfall API."""
+from .vendored import structlog
+
 import functools
-import logging
 import uuid
 from itertools import zip_longest
 from urllib import parse
@@ -8,10 +9,9 @@ from urllib import parse
 from .vendored import requests
 from .utils import get_config
 
-if __name__ == '__main__':
-    logging.basicConfig(level=logging.DEBUG)  # only set logging level when running as main
 
-LOGGER = logging.getLogger(__name__)
+
+LOG = structlog.get_logger()
 
 SCRYFALL_API_URL = get_config('SCRYFALL_API_URL', 'https://api.scryfall.com/cards/search?{}')
 RESULTS_AT_ONCE = get_config('RESULTS_AT_ONCE', 24)
@@ -38,8 +38,10 @@ class Results(list):
     def __getitem__(self, item):
         # This is quite unoptimized an might take a long while when trying to get the last page for example.
         while item >= len(self):  # as long as we don't have the page cached, we have to get the next one.
+            LOG.LOG("Getting next page", next_url=self.next_url)
             if self.next_url is not None:
                 results_json = self.get_url(self.next_url)
+                LOG.LOG("Next page", results_json=results_json)
                 self.extend(list(p) for p in paginate_iterator(results_json['data'], self.chunk_size))
                 self.next_url = results_json.get('next_page', None)
             else:
@@ -102,7 +104,7 @@ def inline_photo_from_card(card):
     """
 
     # if there are multiple faces (DFC), iterate over them. Else use the card itself.
-    LOGGER.debug('Building InlineResult from %r', card)
+    LOG.LOG('Building InlineResult', card=card)
     faces = [card] if 'image_uris' in card else card['card_faces']
     for face in faces:
         args = dict(card=card, photo_width=672, photo_height=936,
