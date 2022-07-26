@@ -38,10 +38,10 @@ class Results(list):
     def __getitem__(self, item):
         # This is quite unoptimized an might take a long while when trying to get the last page for example.
         while item >= len(self):  # as long as we don't have the page cached, we have to get the next one.
-            LOG.LOG("Getting next page", next_url=self.next_url)
+            LOG.msg("Getting next page", next_url=self.next_url)
             if self.next_url is not None:
                 results_json = self.get_url(self.next_url)
-                LOG.LOG("Next page", results_json=results_json)
+                LOG.msg("Next page", results_json=results_json)
                 self.extend(list(p) for p in paginate_iterator(results_json['data'], self.chunk_size))
                 self.next_url = results_json.get('next_page', None)
             else:
@@ -104,7 +104,7 @@ def inline_photo_from_card(card):
     """
 
     # if there are multiple faces (DFC), iterate over them. Else use the card itself.
-    LOG.LOG('Building InlineResult', card=card)
+    LOG.msg('Building InlineResult', card=card)
     faces = [card] if 'image_uris' in card else card['card_faces']
     for face in faces:
         args = dict(card=card, photo_width=672, photo_height=936,
