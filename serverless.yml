@@ -13,12 +13,12 @@ provider:
 
 package:
   patterns:
-    - "*"
+    - "!**"
     - "src/**"
 
 functions:
   post:
-    handler: serverless.search
+    handler: src.serverless.search
     events:
       - http:
           path: scryfall_search_inline
