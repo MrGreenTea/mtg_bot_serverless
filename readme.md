@@ -4,7 +4,7 @@ Use inline in telegram at [@mtg_card_bot <search_term>](https://telegram.me/mtg_
 We use [scryfall's API](scryfall.com/) so you can use their search syntax.
 
 # Deploy
-install requirements with `pip install -r requirements.txt -t vendored`
+install requirements with `pip install -r requirements.txt -t src/vendored`
 
 install serverless with `npm install -g serverless` or just use `npx serverless`
 
