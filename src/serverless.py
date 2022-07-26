@@ -85,11 +85,14 @@ def answer_inline_query(msg):
 
     LOG.msg("Response", post_request)
     post_request.raise_for_status()
-    return {"statusCode": 200}
+    response = {"statusCode": 200}
+    LOG.msg("Response", **response)
+    return response
 
 
 def search(event, _):
     """Answer the event. The second parameter is the AWS context and ignored for now."""
+    LOG.msg("New event", **event)
     try:
         data = json.loads(event["body"])
     except (KeyError, json.JSONDecodeError):
@@ -102,19 +105,20 @@ def search(event, _):
 
     if 'inline_query' in data:
         message = data['inline_query']
-        success = True
         try:
             return answer_inline_query(message)
         except Exception as error:  # pylint: disable=broad-except
             LOG.msg("Error while trying to answer", exc_info=error)
-            success = False
-            return {"statusCode": 500}
+            raise
 
     elif 'message' in data:
-        return {"statusCode": 200,
-                "message": "not implemented"}
+        response = {"statusCode": 200, "message": "not implemented"}
+        LOG.msg("Response", **response)
+        return response
     else:
-        return {
+        response = {
             "statusCode": 400,
             "message": "unknown message type. Expected inline_query or message in data."
         }
+        LOG.msg("Response", **response)
+        return response
