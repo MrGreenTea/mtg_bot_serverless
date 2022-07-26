@@ -96,10 +96,12 @@ def search(event, _):
     try:
         data = json.loads(event["body"])
     except (KeyError, json.JSONDecodeError):
-        return {
+        response = {
             "statusCode": 400,
             "message": "body is not valid json or missing"
         }
+        LOG.msg("Response", **response)
+        return response
 
     LOG.msg("data", data=data)
 
