@@ -43,7 +43,7 @@ def compute_answer(query_id, query_string, user_from, offset):
     scryfall_results = scryfall.get_photos_from_scryfall(query_string, int(offset) if offset else 0)
 
     if scryfall_results['results']:  # cache last results for current User
-        LOG.msg("Caching query", query_string=query_string, user_id, user_id)
+        LOG.msg("Caching query", query_string=query_string, user_id=user_id)
         _CACHE[user_id] = query_string
 
     response.update(scryfall_results)
