@@ -7,7 +7,6 @@ from urllib import parse
 
 from vendored import requests
 
-import elastic
 import scryfall
 import utils
 
@@ -20,37 +19,6 @@ TOKEN = utils.get_config('TELEGRAM_TOKEN')
 TELEGRAM_API_URL = utils.get_config('TELEGRAM_API_URL', 'https://api.telegram.org/bot{}/').format(TOKEN)
 
 _CACHE = {}
-
-if utils.get_config('ELASTIC_ENDPOINT', default=False):
-    ELASTIC_CLIENT = elastic.connect_elastic(utils.get_config('ELASTIC_ENDPOINT'))
-
-    _QUERY_RESULTS_MAPPINGS = {
-        "mappings": {
-            DOC_TYPE: {
-                "properties": {
-                    "id": {"type": "long"},
-                    "from": {
-                        "properties": {
-                            "id": {"type": "long"},
-                            "username": {"type": "keyword"}
-                        }
-                    },
-                    "timestamp": {"type": "date"},
-                    "offset": {"type": "keyword"},
-                    "query": {"type": "text", "fields": {"raw": {"type": "keyword"}}},  # raw as keyword for aggregating
-                    "success": {"type": "boolean", "null_value": True}
-                }
-            }
-        }
-    }
-
-    elastic.ensure_index(ELASTIC_CLIENT, utils.get_config('ELASTIC_INDEX', 'query_requests'),
-                         body=_QUERY_RESULTS_MAPPINGS)
-else:  # else fake the ELASTIC_CLIENT
-    import unittest.mock
-
-    ELASTIC_CLIENT = unittest.mock.Mock(spec=elastic.elasticsearch.Elasticsearch)
-    del unittest.mock
 
 
 def compute_answer(query_id, query_string, user_from, offset):
@@ -143,10 +111,6 @@ def search(event, _):
             LOGGER.error("Error while trying to answer", exc_info=error)
             success = False
             return {"statusCode": 500}
-        finally:
-            ELASTIC_CLIENT.create('query_requests', DOC_TYPE, unique_id,
-                                  body=dict(**message, success=success,
-                                            timestamp=datetime.datetime.now(datetime.timezone.utc)))
 
     elif 'message' in data:
         return {"statusCode": 200,
